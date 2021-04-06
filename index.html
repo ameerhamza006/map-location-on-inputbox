@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>Page Title</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-switch/3.3.2/js/bootstrap-switch.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.2/css/bootstrap-theme.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-switch/3.3.2/css/bootstrap2/bootstrap-switch.min.css" />
+
+</head>
+<body>
+    
+    <input type="hidden" id="latitude" name="latitude" value="{{ old('latitude') }}" readonly >
+    <input type="hidden" id="longitude" name="longitude" value="{{ old('longitude') }}" readonly >
+
+
+    <div class="col-md-6">
+        
+    <h4><b> Autocomplete Map Location</b></h4>
+        <div class="row">
+            
+    <div class="col-xs-12">
+        <div class="form-group form-group-default required m-t-5">
+            <label>Address</label>
+             <input tabindex="2" id="pac-input" class="form-control controls" type="text" placeholder="Enter Address" name="address" required>
+           <!-- <input tabindex="2" id="address" class="form-control " type="text" placeholder="Enter " name="address" required> -->
+            
+        </div>
+    </div>
+    <div class="col-xs-12">
+        <div id="map" style="height:400px;"></div>
+    </div>
+</div>
+</div>
+    <hr>
+
+
+
+
+
+ 
+<script>
+    var map;
+    var input = document.getElementById('pac-input');
+    var latitude = document.getElementById('latitude');
+    var longitude = document.getElementById('longitude');
+    var address = document.getElementById('address');
+
+    function initMap() {
+
+        var userLocation = new google.maps.LatLng(
+                52.520008,
+                13.404954
+            );
+
+        map = new google.maps.Map(document.getElementById('map'), {
+            center: userLocation,
+            zoom: 15
+        });
+
+        var service = new google.maps.places.PlacesService(map);
+        var autocomplete = new google.maps.places.Autocomplete(input);
+        var infowindow = new google.maps.InfoWindow();
+
+        autocomplete.bindTo('bounds', map);
+
+        var infowindow = new google.maps.InfoWindow({
+            content: "Shop Location",
+        });
+
+        var marker = new google.maps.Marker({
+            map: map,
+            draggable: true,
+            anchorPoint: new google.maps.Point(0, -29)
+        });
+
+        marker.setVisible(true);
+        marker.setPosition(userLocation);
+        infowindow.open(map, marker);
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(location) {
+                var userLocation = new google.maps.LatLng(
+                    location.coords.latitude,
+                    location.coords.longitude
+                );
+                marker.setPosition(userLocation);
+                map.setCenter(userLocation);
+                map.setZoom(13);
+            });
+        }
+
+        google.maps.event.addListener(map, 'click', updateMarker);
+        google.maps.event.addListener(marker, 'dragend', updateMarker);
+
+        function updateMarker(event) {
+            var geocoder = new google.maps.Geocoder();
+            geocoder.geocode({'latLng': event.latLng}, function (results, status) {
+                if (status == google.maps.GeocoderStatus.OK) {
+                    if (results[0]) {
+                        input.value = results[0].formatted_address;
+                        updateForm(event.latLng.lat(), event.latLng.lng(), results[0].formatted_address);
+                    } else {
+                        alert('No Address Found');
+                    }
+                } else {
+                    alert('Geocoder failed due to: ' + status);
+                }
+            });
+
+            marker.setPosition(event.latLng);
+            map.setCenter(event.latLng);
+        }
+
+        autocomplete.addListener('place_changed', function(event) {
+            marker.setVisible(false);
+            var place = autocomplete.getPlace();
+
+            if (place.hasOwnProperty('place_id')) {
+                if (!place.geometry) {
+                    window.alert("Autocomplete's returned place contains no geometry");
+                    return;
+                }
+                updateLocation(place.geometry.location);
+            } else {
+                service.textSearch({
+                    query: place.name
+                }, function(results, status) {
+                    if (status == google.maps.places.PlacesServiceStatus.OK) {
+                        updateLocation(results[0].geometry.location, results[0].formatted_address);
+                        input.value = results[0].formatted_address;
+                    }
+                });
+            }
+        });
+
+        function updateLocation(location) {
+            map.setCenter(location);
+            marker.setPosition(location);
+            marker.setVisible(true);
+            infowindow.open(map, marker);
+            updateForm(location.lat(), location.lng(), input.value);
+        }
+
+        function updateForm(lat, lng, addr) {
+            console.log(lat,lng, addr);
+            latitude.value = lat;
+            longitude.value = lng;
+            address.value = addr;
+        }
+    }
+</script>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBIUaBvvlXdLIxkhAVVqQJC7jhSg98g7NE&libraries=places&callback=initMap" async defer></script>
+    
+</body>
+</html>
